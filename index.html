@@ -1,835 +1,113 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
-import { Settings, X, MessageCircle, ChevronDown, Eye, EyeOff, Feather, LogOut, User, Lock, Send, Star, Sparkles, Trash2, AlertTriangle } from "lucide-react";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Luminis — Private Writing Circle</title>
 
-// ─── Google Fonts ─────────────────────────────────────────────────────────────
-const FontLoader = () => (
-  <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #080613; overflow: hidden; }
+  <!-- React & Babel -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- Fixed Framer Motion CDN -->
+  <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+  
+  <!-- Tailwind for the styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(168,85,247,0.3); border-radius: 2px; }
-
-    .font-serif { font-family: 'Playfair Display', Georgia, serif; }
-    .font-cormorant { font-family: 'Cormorant Garamond', Georgia, serif; }
-    .font-sans { font-family: 'DM Sans', sans-serif; }
-
-    .glass {
-      background: rgba(15, 8, 35, 0.6);
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
-      border: 1px solid rgba(168, 85, 247, 0.15);
-    }
-    .glass-light {
-      background: rgba(30, 15, 60, 0.5);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(168, 85, 247, 0.2);
-    }
+  <style>
+    body { background: #080613; color: #f3e8ff; margin: 0; overflow: hidden; font-family: 'DM Sans', sans-serif; }
+    .glass { background: rgba(15, 8, 35, 0.6); backdrop-filter: blur(24px); border: 1px solid rgba(168, 85, 247, 0.15); }
     .glow-text { text-shadow: 0 0 20px rgba(192, 132, 252, 0.6); }
-    .glow-border { box-shadow: 0 0 0 1px rgba(168,85,247,0.3), 0 0 30px rgba(168,85,247,0.1); }
-    .input-field {
-      background: rgba(10, 5, 25, 0.7);
-      border: 1px solid rgba(168, 85, 247, 0.2);
-      color: #e9d5ff;
-      border-radius: 8px;
-      padding: 10px 14px;
-      width: 100%;
-      outline: none;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .input-field:focus { border-color: rgba(168,85,247,0.6); box-shadow: 0 0 0 3px rgba(168,85,247,0.1); }
-    .input-field::placeholder { color: rgba(192,132,252,0.3); }
-    .btn-primary {
-      background: linear-gradient(135deg, rgba(126,34,206,0.9), rgba(109,40,217,0.8));
-      border: 1px solid rgba(168,85,247,0.4);
-      color: #f3e8ff;
-      padding: 10px 20px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      letter-spacing: 0.03em;
-      transition: all 0.2s;
-      width: 100%;
-    }
-    .btn-primary:hover { background: linear-gradient(135deg, rgba(147,51,234,0.9), rgba(126,34,206,0.8)); box-shadow: 0 0 20px rgba(168,85,247,0.3); }
-    .star-glow { filter: drop-shadow(0 0 6px rgba(192,132,252,0.8)); }
-    .echo-card { filter: drop-shadow(0 0 8px rgba(168,85,247,0.5)); }
-  `}</style>
-);
+    .star-bg { position: absolute; width: 2px; height: 2px; background: white; border-radius: 50%; opacity: 0.3; }
+    .echo-card { filter: drop-shadow(0 0 8px rgba(168, 85, 247, 0.5)); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const INITIAL_POSTS = [
-  {
-    id: 1, x: 18, y: 22, size: 2.8, brightness: 0.95,
-    title: "The Cartographer of Forgotten Seas",
-    body: `She mapped coastlines that existed only between sleeping and waking — those liminal shores where the tide pulls back to reveal not sand, but the sediment of every conversation you meant to have.
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    // Fix for the 'motion' is undefined error
+    const motion = window.Motion || window.FramerMotion.motion;
+    const AnimatePresence = window.Motion?.AnimatePresence || window.FramerMotion.AnimatePresence;
 
-Her instruments were unreliable. The compass needled always toward regret. The sextant measured not stars but the precise angle at which one person becomes a stranger to another.
+    function App() {
+      const [isLoggedIn, setIsLoggedIn] = useState(false);
+      const [view, setView] = useState('login'); // login, constellation, settings
 
-Still, she drew. She drew with the conviction that if a place can be named, it cannot be entirely lost. And so she gave names to all the places grief had made in her: The Bay of Almost, Cape Forgiveness-Deferred, the long peninsula she called After You Left I Learned to Cook.
-
-In the end, the map covered every wall of every room she ever lived in. Visitors would stand in her doorway, undone by the beauty of so much careful cartography, and they would ask: have you been to all these places?
-
-She would smile at the question's innocence and say only: *I have never left them.*`,
-    echoes: [
-      { id: 1, text: "The Bay of Almost broke something open in me. I've been sitting with it for ten minutes now." },
-      { id: 2, text: "Grief cartography — I've never seen it named so precisely." },
-      { id: 3, text: "The compass needled toward regret. Yes. Exactly yes." }
-    ]
-  },
-  {
-    id: 2, x: 62, y: 15, size: 2.2, brightness: 0.8,
-    title: "A Taxonomy of Silences",
-    body: `There is the silence before thunder — pregnant, mineral, charged with the electricity of what is about to be said. And there is the silence after thunder, which is entirely different: rinsed, grateful, the world washed clean.
-
-There is the silence of a room someone has just left, which holds the shape of them the way a pressed flower holds the shape of summer.
-
-There is the silence between two people who once knew each other's breathing patterns in sleep, who now sit across a table ordering coffee, making small words do enormous work.
-
-And there is the rarest silence — the one found only in perfect understanding — when language becomes redundant and two minds simply rest in each other like stones warmed by the same sun.
-
-I have been collecting silences for years. I keep them in a jar on the windowsill. Mornings, I hold them up to the light to see which ones are still alive.`,
-    echoes: [
-      { id: 1, text: "The silence that holds the shape of someone. I will carry this image." },
-      { id: 2, text: "I keep them in a jar on the windowsill. The whole essay earned that line." }
-    ]
-  },
-  {
-    id: 3, x: 35, y: 55, size: 3.2, brightness: 1,
-    title: "Instructions for Becoming Water",
-    body: `First, release the idea that you have edges.
-
-This will take longer than you expect. You have been practicing edges your entire life — the sharp border of your name, the precise perimeter of your opinions, the defined shape of what you will and will not allow. Let all of this become suggestion, then memory, then nothing.
-
-Second, learn the language of indirection. Water does not argue with stone. It simply continues, patient as centuries, until it finds the way through or the way around or, most quietly, the way beneath.
-
-Third, understand that clarity and depth are not opposites. The clearest water can be the deepest. You can be fully transparent and still utterly fathomless.
-
-Finally — and this is the hardest part — accept that you will take the shape of wherever you are held. This is not surrender. This is the highest form of attention: to know where you are by knowing what contains you.
-
-Water does not mourn the vessel it has left. It is already becoming the river.`,
-    echoes: [
-      { id: 1, text: "Clarity and depth are not opposites. I needed to hear this today." },
-      { id: 2, text: "The way you built to that final line — like watching tide come in." },
-      { id: 3, text: "Water does not argue with stone. I'm writing this somewhere I'll see it." },
-      { id: 4, text: "This is the piece that made me want to submit my own writing here." }
-    ]
-  },
-  {
-    id: 4, x: 78, y: 42, size: 2.0, brightness: 0.75,
-    title: "On the Weight of Light",
-    body: `Physicists will tell you that light has momentum — that a photon, massless as it is, can still push. Prove it with a solar sail if you have one handy, they say, smiling at the impossible practicality.
-
-What they don't explain is the light that presses differently. The particular quality of afternoon sun in late October, its angle changed just enough to say: *summer is over, truly over now.* The way it falls on familiar objects and makes them briefly strange, briefly precious.
-
-Or the light through old glass, rippled and imperfect, that gently warps the world outside into something slightly more true than truth. A better truth. The truth of how it feels.
-
-I have been trying to catch this light for years. In the morning I arrange myself near windows. In the afternoon I follow the yellow squares it makes across the floor until the square shrinks to a line and the line to nothing.
-
-At night I remember: you cannot save light. You can only be where it is, for as long as it is, and let it press its weightless weight against your face.`,
-    echoes: [
-      { id: 1, text: "The light through old glass, warped into something more true than truth. Stunning." }
-    ]
-  },
-  {
-    id: 5, x: 50, y: 78, size: 2.5, brightness: 0.88,
-    title: "Rehearsal",
-    body: `Every evening I rehearse the things I should have said. It is a meticulous practice, requiring good light and a willingness to be both audience and actor.
-
-I give myself better lines. I deliver them with the steadiness I lacked at the time, when my voice had gone somewhere unreachable, when the words I needed were in a language my throat had forgotten.
-
-In these rehearsals, I am never cruel. This is perhaps my failing — a rehearsal is useless if it doesn't prepare you for the actual performance, and the actual performance of being a person includes cruelty, includes the wrong words said perfectly, includes the necessary wound.
-
-But I cannot seem to be cruel in rehearsal. Even alone, even in memory, I extend the courtesies I couldn't manage then.
-
-Maybe this is what practice actually makes: not perfect, but kind. Maybe every evening I rehearse, I am rehearsing kindness. And maybe the real performance — next time, the next time — will be finally ready.`,
-    echoes: [
-      { id: 1, text: "Practice makes not perfect but kind. The whole piece hinges on this turn." },
-      { id: 2, text: "The voice that had gone somewhere unreachable. I know that place exactly." },
-      { id: 3, text: "I've been rehearsing too. I didn't know that's what it was called." }
-    ]
-  },
-  {
-    id: 6, x: 88, y: 68, size: 1.8, brightness: 0.7,
-    title: "Small Hours",
-    body: `At 3am the mind becomes honest in ways it refuses during daylight.
-
-It is an uncurated honesty — the kind that doesn't perform for an audience, that doesn't arrange itself into the shape of what you'd like to believe. Just the raw material: this is what you want, this is what you fear, this is the thing you have been not-thinking for eleven months.
-
-I used to fight these hours. Now I make tea. I sit with the particular darkness that exists between streetlight and window-glass and I allow the night its editorial work.
-
-By morning the truth is softer. Not smaller — never smaller — but rounder, worn smooth by the sleep that comes eventually. Easier to carry.
-
-The small hours are not for everyone. Some people sleep right through them and wake intact.
-
-I have never been that kind of person. I have always been someone who needs to be awake for the difficult parts.`,
-    echoes: []
-  },
-  {
-    id: 7, x: 12, y: 68, size: 2.3, brightness: 0.85,
-    title: "Letter to the Version of Me Who Got It Right",
-    body: `Dear parallel self,
-
-I imagine you made the same coffee that morning. Stood in the same kitchen. But then you said the thing — the honest thing, the difficult beautiful thing — and the whole trajectory of the next three years bent differently.
-
-I don't resent you. That would require a kind of belief in my own alternative I don't quite possess. But I am curious about you, the way you might be curious about a door you didn't open: not certain it led somewhere better, just aware that it led somewhere *other.*
-
-Do you still have the same dreams? I want to ask you this most of all. Whether the grammar of our unconscious persists across the choices we make, or whether a different life eventually requires different metaphors for its fears.
-
-I think you are happy. Or not happy exactly — I don't believe that's the actual metric — but *well*. Calibrated. Living at the right frequency for the instrument you are.
-
-I am still tuning. But I wanted you to know I'm glad you exist somewhere. Even in the grammar of might-have-been, you are evidence that I was capable of it.
-
-With something warmer than envy,
-*The Other One*`,
-    echoes: [
-      { id: 1, text: "Living at the right frequency for the instrument you are. I've been searching for this phrase my whole life." },
-      { id: 2, text: "With something warmer than envy. The sign-off is everything." }
-    ]
-  }
-];
-
-// ─── Stars Background ─────────────────────────────────────────────────────────
-const BG_STARS = Array.from({ length: 180 }, (_, i) => ({
-  id: i,
-  x: Math.random() * 100,
-  y: Math.random() * 100,
-  r: Math.random() * 1.2 + 0.2,
-  opacity: Math.random() * 0.5 + 0.1,
-  duration: Math.random() * 4 + 3,
-}));
-
-// ─── APP ──────────────────────────────────────────────────────────────────────
-export default function App() {
-  const [users, setUsers] = useState({ luminis: { password: "luminis", displayName: "A Wandering Mind" } });
-  const [currentUser, setCurrentUser] = useState(null);
-  const [posts, setPosts] = useState(INITIAL_POSTS);
-  const [view, setView] = useState("gate"); // gate | constellation | settings
-  const [selectedPost, setSelectedPost] = useState(null);
-  const [showEchoes, setShowEchoes] = useState(false);
-  const [newEcho, setNewEcho] = useState("");
-  const [settingsTab, setSettingsTab] = useState("profile");
-  const [authMode, setAuthMode] = useState("login");
-
-  // Auth handlers
-  const handleLogin = (id, pw) => {
-    if (users[id] && users[id].password === pw) {
-      setCurrentUser(id);
-      setView("constellation");
-      return null;
-    }
-    return "Invalid credentials. The gate remains closed.";
-  };
-
-  const handleSignup = (id, pw) => {
-    if (users[id]) return "This name is already claimed by another wanderer.";
-    if (id.length < 3) return "Your unique ID must be at least 3 characters.";
-    setUsers(prev => ({ ...prev, [id]: { password: pw, displayName: "Anonymous Wanderer" } }));
-    setCurrentUser(id);
-    setView("constellation");
-    return null;
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setView("gate");
-    setSelectedPost(null);
-  };
-
-  const handleAddEcho = () => {
-    if (!newEcho.trim() || !selectedPost) return;
-    const echo = { id: Date.now(), text: newEcho.trim() };
-    setPosts(prev => prev.map(p => p.id === selectedPost.id
-      ? { ...p, echoes: [...p.echoes, echo] }
-      : p
-    ));
-    setSelectedPost(prev => ({ ...prev, echoes: [...prev.echoes, echo] }));
-    setNewEcho("");
-  };
-
-  const handleDeletePost = (postId) => {
-    setPosts(prev => prev.filter(p => p.id !== postId));
-    setSelectedPost(null);
-    setShowEchoes(false);
-  };
-
-  const handleDeleteEcho = (postId, echoId) => {
-    setPosts(prev => prev.map(p => p.id === postId
-      ? { ...p, echoes: p.echoes.filter(e => e.id !== echoId) }
-      : p
-    ));
-    setSelectedPost(prev => ({ ...prev, echoes: prev.echoes.filter(e => e.id !== echoId) }));
-  };
-
-  const handleUpdateProfile = (displayName, newPw) => {
-    setUsers(prev => ({
-      ...prev,
-      [currentUser]: {
-        ...prev[currentUser],
-        displayName: displayName || prev[currentUser].displayName,
-        ...(newPw ? { password: newPw } : {})
-      }
-    }));
-    return "Your details have been updated.";
-  };
-
-  const userInfo = currentUser ? users[currentUser] : null;
-
-  return (
-    <>
-      <FontLoader />
-      <div style={{ width: "100vw", height: "100vh", overflow: "hidden", background: "#080613", position: "relative" }}>
-        <AnimatePresence mode="wait">
-          {view === "gate" && (
-            <GatePage key="gate" onLogin={handleLogin} onSignup={handleSignup} authMode={authMode} setAuthMode={setAuthMode} />
-          )}
-          {view === "constellation" && (
-            <ConstellationPage
-              key="constellation"
-              posts={posts}
-              onSelectPost={p => { setSelectedPost(p); setShowEchoes(false); }}
-              onSettings={() => setView("settings")}
-              userInfo={userInfo}
-            />
-          )}
-          {view === "settings" && (
-            <SettingsPage
-              key="settings"
-              userInfo={userInfo}
-              onBack={() => setView("constellation")}
-              onUpdate={handleUpdateProfile}
-              onLogout={handleLogout}
-              tab={settingsTab}
-              setTab={setSettingsTab}
-            />
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {selectedPost && (
-            <PostModal
-              post={selectedPost}
-              showEchoes={showEchoes}
-              setShowEchoes={setShowEchoes}
-              newEcho={newEcho}
-              setNewEcho={setNewEcho}
-              onAddEcho={handleAddEcho}
-              onDeletePost={handleDeletePost}
-              onDeleteEcho={handleDeleteEcho}
-              onClose={() => { setSelectedPost(null); setShowEchoes(false); }}
-            />
-          )}
-        </AnimatePresence>
-      </div>
-    </>
-  );
-}
-
-// ─── GATE PAGE ────────────────────────────────────────────────────────────────
-function GatePage({ onLogin, onSignup, authMode, setAuthMode }) {
-  const [id, setId] = useState("");
-  const [pw, setPw] = useState("");
-  const [showPw, setShowPw] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e?.preventDefault();
-    setError(""); setSuccess("");
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 600));
-    const err = authMode === "login" ? onLogin(id, pw) : onSignup(id, pw);
-    if (err) setError(err);
-    setLoading(false);
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}
-    >
-      {/* Star BG */}
-      <div style={{ position: "absolute", inset: 0 }}>
-        {BG_STARS.map(s => (
-          <motion.div key={s.id}
-            animate={{ opacity: [s.opacity, s.opacity * 0.3, s.opacity] }}
-            transition={{ duration: s.duration, repeat: Infinity, ease: "easeInOut" }}
-            style={{ position: "absolute", left: `${s.x}%`, top: `${s.y}%`, width: s.r * 2, height: s.r * 2, borderRadius: "50%", background: "white" }}
-          />
-        ))}
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 80% 80% at 50% 50%, rgba(88,28,135,0.25) 0%, transparent 70%)" }} />
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 40, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="glass glow-border"
-        style={{ width: 380, borderRadius: 20, padding: "40px 36px", position: "relative", zIndex: 10 }}
-      >
-        {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 3, repeat: Infinity }}>
-            <Sparkles style={{ width: 28, height: 28, color: "#c084fc", margin: "0 auto 12px" }} />
-          </motion.div>
-          <h1 className="font-serif glow-text" style={{ fontSize: 32, color: "#f3e8ff", letterSpacing: "0.05em", marginBottom: 4 }}>Luminis</h1>
-          <p className="font-sans" style={{ color: "rgba(192,132,252,0.5)", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase" }}>Private Writing Circle</p>
+      // Minimal Starfield Component
+      const StarField = () => (
+        <div className="absolute inset-0 pointer-events-none">
+          {[...Array(100)].map((_, i) => (
+            <div key={i} className="star-bg" style={{
+              top: `${Math.random() * 100}%`,
+              left: `${Math.random() * 100}%`,
+              animation: `pulse ${2 + Math.random() * 4}s infinite`
+            }} />
+          ))}
         </div>
+      );
 
-        {/* Toggle */}
-        <div style={{ display: "flex", background: "rgba(10,5,25,0.6)", borderRadius: 10, padding: 4, marginBottom: 24, border: "1px solid rgba(168,85,247,0.15)" }}>
-          {["login", "signup"].map(mode => (
-            <motion.button key={mode} onClick={() => { setAuthMode(mode); setError(""); }}
-              style={{ flex: 1, padding: "8px 0", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500, letterSpacing: "0.02em", position: "relative", zIndex: 1, color: authMode === mode ? "#f3e8ff" : "rgba(192,132,252,0.4)", background: "transparent", transition: "color 0.2s" }}
+      if (view === 'login') {
+        return (
+          <div className="h-screen w-full flex items-center justify-center relative bg-[#080613]">
+            <StarField />
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} 
+              animate={{ opacity: 1, y: 0 }}
+              className="glass p-10 rounded-2xl w-96 z-10 text-center"
             >
-              {authMode === mode && (
-                <motion.div layoutId="auth-tab" style={{ position: "absolute", inset: 0, background: "rgba(126,34,206,0.7)", borderRadius: 7, zIndex: -1 }} transition={{ type: "spring", bounce: 0.2, duration: 0.4 }} />
-              )}
-              {mode === "login" ? "Enter" : "Join"}
-            </motion.button>
-          ))}
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div>
-            <label className="font-sans" style={{ display: "block", fontSize: 11, color: "rgba(192,132,252,0.5)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>
-              <User style={{ width: 10, height: 10, display: "inline", marginRight: 5 }} />
-              Unique ID
-            </label>
-            <input className="input-field" value={id} onChange={e => setId(e.target.value)} placeholder="your.unique.id" onKeyDown={e => e.key === "Enter" && handleSubmit()} />
-          </div>
-          <div>
-            <label className="font-sans" style={{ display: "block", fontSize: 11, color: "rgba(192,132,252,0.5)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>
-              <Lock style={{ width: 10, height: 10, display: "inline", marginRight: 5 }} />
-              Passphrase
-            </label>
-            <div style={{ position: "relative" }}>
-              <input className="input-field" type={showPw ? "text" : "password"} value={pw} onChange={e => setPw(e.target.value)} placeholder="••••••••" style={{ paddingRight: 40 }} onKeyDown={e => e.key === "Enter" && handleSubmit()} />
-              <button onClick={() => setShowPw(!showPw)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "rgba(192,132,252,0.4)", padding: 0 }}>
-                {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+              <h1 className="text-4xl font-serif glow-text mb-6">Luminis</h1>
+              <input type="text" placeholder="Club ID" className="w-full p-3 mb-4 rounded bg-black/40 border border-purple-500/30 outline-none" />
+              <input type="password" placeholder="Passphrase" className="w-full p-3 mb-6 rounded bg-black/40 border border-purple-500/30 outline-none" />
+              <button 
+                onClick={() => setView('constellation')}
+                className="w-full py-3 bg-purple-600 hover:bg-purple-500 rounded-lg transition-all font-bold"
+              >
+                Enter the Void
               </button>
-            </div>
+            </motion.div>
           </div>
+        );
+      }
 
-          <AnimatePresence>
-            {error && (
-              <motion.p initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                className="font-sans" style={{ color: "#f87171", fontSize: 12, textAlign: "center" }}>{error}</motion.p>
-            )}
-          </AnimatePresence>
-
-          <motion.button className="btn-primary" onClick={handleSubmit} whileTap={{ scale: 0.98 }} style={{ marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, height: 42 }}>
-            {loading
-              ? <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}><Sparkles size={14} /></motion.div>
-              : <><Feather size={14} />{authMode === "login" ? "Pass Through the Gate" : "Claim Your Place"}</>
-            }
-          </motion.button>
+      return (
+        <div className="h-screen w-full relative bg-[#080613] overflow-hidden">
+          <StarField />
+          <nav className="p-6 flex justify-between items-center relative z-10">
+            <h2 className="text-xl font-serif glow-text">Luminis Constellation</h2>
+            <button onClick={() => setView('login')} className="text-purple-300 hover:text-white">Logout</button>
+          </nav>
+          
+          <div className="flex items-center justify-center h-full">
+             <motion.div 
+              animate={{ scale: [1, 1.1, 1], opacity: [0.5, 1, 0.5] }}
+              transition={{ repeat: Infinity, duration: 4 }}
+              className="w-4 h-4 bg-purple-400 rounded-full cursor-pointer shadow-[0_0_20px_purple]"
+              onClick={() => alert("This star contains a secret message...")}
+             />
+             <p className="absolute bottom-10 text-purple-400/50 text-sm italic">Click a star to read whispers</p>
+          </div>
         </div>
-
-        <p className="font-sans" style={{ textAlign: "center", marginTop: 20, color: "rgba(192,132,252,0.3)", fontSize: 11, fontStyle: "italic" }}>
-          All voices here speak anonymously.
-        </p>
-      </motion.div>
-    </motion.div>
-  );
-}
-
-// ─── CONSTELLATION PAGE ───────────────────────────────────────────────────────
-function ConstellationPage({ posts, onSelectPost, onSettings, userInfo }) {
-  const containerRef = useRef(null);
-  const mouseX = useMotionValue(0.5);
-  const mouseY = useMotionValue(0.5);
-  const bgX = useTransform(mouseX, [0, 1], [-20, 20]);
-  const bgY = useTransform(mouseY, [0, 1], [-20, 20]);
-
-  const handleMouseMove = useCallback((e) => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    mouseX.set(e.clientX / rect.width);
-    mouseY.set(e.clientY / rect.height);
-  }, [mouseX, mouseY]);
-
-  return (
-    <motion.div ref={containerRef} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.3 } }}
-      onMouseMove={handleMouseMove}
-      style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden" }}
-    >
-      {/* Parallax BG */}
-      <motion.div style={{ position: "absolute", inset: -40, x: bgX, y: bgY }}>
-        {BG_STARS.map(s => (
-          <motion.div key={s.id}
-            animate={{ opacity: [s.opacity, s.opacity * 0.2, s.opacity] }}
-            transition={{ duration: s.duration, repeat: Infinity, ease: "easeInOut", delay: s.id * 0.05 }}
-            style={{ position: "absolute", left: `${s.x}%`, top: `${s.y}%`, width: s.r * 2, height: s.r * 2, borderRadius: "50%", background: "white" }}
-          />
-        ))}
-      </motion.div>
-
-      {/* Ambient glows */}
-      <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-        <div style={{ position: "absolute", top: "20%", left: "30%", width: 400, height: 400, background: "radial-gradient(circle, rgba(88,28,135,0.2) 0%, transparent 70%)", borderRadius: "50%" }} />
-        <div style={{ position: "absolute", bottom: "30%", right: "20%", width: 300, height: 300, background: "radial-gradient(circle, rgba(109,40,217,0.15) 0%, transparent 70%)", borderRadius: "50%" }} />
-      </div>
-
-      {/* Header */}
-      <motion.div initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}
-        style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "20px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", zIndex: 10 }}>
-        <div>
-          <h1 className="font-serif glow-text" style={{ fontSize: 22, color: "#f3e8ff", letterSpacing: "0.04em" }}>Luminis</h1>
-          <p className="font-sans" style={{ color: "rgba(192,132,252,0.4)", fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", marginTop: 1 }}>The Constellation</p>
-        </div>
-        <button onClick={onSettings} style={{ background: "rgba(126,34,206,0.2)", border: "1px solid rgba(168,85,247,0.2)", borderRadius: 10, padding: "8px 10px", cursor: "pointer", color: "rgba(192,132,252,0.6)", transition: "all 0.2s", display: "flex", alignItems: "center", gap: 6 }}
-          onMouseEnter={e => { e.currentTarget.style.background = "rgba(126,34,206,0.4)"; e.currentTarget.style.color = "#c084fc"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "rgba(126,34,206,0.2)"; e.currentTarget.style.color = "rgba(192,132,252,0.6)"; }}>
-          <Settings size={15} />
-        </button>
-      </motion.div>
-
-      {/* Post Stars */}
-      {posts.map((post, i) => (
-        <WritingStar key={post.id} post={post} delay={i * 0.1} onClick={() => onSelectPost(post)} />
-      ))}
-
-      {/* Hint */}
-      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }}
-        className="font-sans" style={{ position: "absolute", bottom: 28, left: "50%", transform: "translateX(-50%)", color: "rgba(192,132,252,0.25)", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-        Each star holds a piece of writing
-      </motion.p>
-    </motion.div>
-  );
-}
-
-function WritingStar({ post, delay, onClick }) {
-  const [hovered, setHovered] = useState(false);
-
-  return (
-    <motion.div initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay, duration: 0.6, ease: "backOut" }}
-      style={{ position: "absolute", left: `${post.x}%`, top: `${post.y}%`, zIndex: 5, cursor: "pointer" }}
-      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} onClick={onClick}
-    >
-      {/* Outer glow ring */}
-      <AnimatePresence>
-        {hovered && (
-          <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }}
-            style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: post.size * 40, height: post.size * 40, borderRadius: "50%", background: "radial-gradient(circle, rgba(168,85,247,0.25) 0%, transparent 70%)", pointerEvents: "none" }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Star core */}
-      <motion.div
-        animate={{ scale: [1, 1.15, 1], opacity: [post.brightness * 0.8, post.brightness, post.brightness * 0.8] }}
-        transition={{ duration: 2.5 + post.id * 0.3, repeat: Infinity, ease: "easeInOut" }}
-        style={{ width: post.size * 10, height: post.size * 10, borderRadius: "50%", background: `radial-gradient(circle, rgba(245,208,254,${post.brightness}) 0%, rgba(168,85,247,${post.brightness * 0.6}) 50%, transparent 70%)`, filter: `drop-shadow(0 0 ${post.size * 4}px rgba(192,132,252,${post.brightness * 0.9}))` }}
-        className="star-glow"
-      />
-
-      {/* Tooltip */}
-      <AnimatePresence>
-        {hovered && (
-          <motion.div initial={{ opacity: 0, y: 6, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6, scale: 0.95 }} transition={{ duration: 0.15 }}
-            className="glass"
-            style={{ position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)", marginTop: 10, padding: "8px 12px", borderRadius: 8, whiteSpace: "nowrap", pointerEvents: "none", zIndex: 20 }}>
-            <p className="font-serif" style={{ fontSize: 12, color: "#e9d5ff", letterSpacing: "0.02em" }}>{post.title}</p>
-            <p className="font-sans" style={{ fontSize: 10, color: "rgba(192,132,252,0.45)", marginTop: 2 }}>{post.echoes.length} reflection{post.echoes.length !== 1 ? "s" : ""}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-}
-
-// ─── POST MODAL ───────────────────────────────────────────────────────────────
-function PostModal({ post, showEchoes, setShowEchoes, newEcho, setNewEcho, onAddEcho, onDeletePost, onDeleteEcho, onClose }) {
-  const echoRef = useRef(null);
-  const [confirmDeletePost, setConfirmDeletePost] = useState(false);
-  const [confirmDeleteEcho, setConfirmDeleteEcho] = useState(null); // echoId
-
-  useEffect(() => {
-    if (showEchoes && echoRef.current) {
-      setTimeout(() => echoRef.current?.scrollTo({ top: echoRef.current.scrollHeight, behavior: "smooth" }), 100);
+      );
     }
-  }, [showEchoes, post.echoes.length]);
 
-  return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}
-      onClick={e => e.target === e.currentTarget && onClose()}
-    >
-      {/* Backdrop */}
-      <motion.div initial={{ backdropFilter: "blur(0px)" }} animate={{ backdropFilter: "blur(12px)" }} exit={{ backdropFilter: "blur(0px)" }}
-        style={{ position: "absolute", inset: 0, background: "rgba(5,2,15,0.8)" }} onClick={onClose}
-      />
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
 
-      <motion.div initial={{ opacity: 0, scale: 0.92, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.92, y: 30 }}
-        transition={{ type: "spring", damping: 28, stiffness: 280 }}
-        className="glass glow-border"
-        style={{ position: "relative", zIndex: 1, width: "100%", maxWidth: 640, maxHeight: "82vh", borderRadius: 20, display: "flex", flexDirection: "column", overflow: "hidden" }}
-      >
-        {/* Top bar */}
-        <div style={{ padding: "20px 24px 0", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexShrink: 0 }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-              <Star size={12} style={{ color: "#a855f7" }} />
-              <span className="font-sans" style={{ fontSize: 10, color: "rgba(168,85,247,0.5)", letterSpacing: "0.15em", textTransform: "uppercase" }}>From the Constellation</span>
-            </div>
-            <h2 className="font-serif" style={{ fontSize: 22, color: "#f3e8ff", letterSpacing: "0.02em", lineHeight: 1.3 }}>{post.title}</h2>
-          </div>
-          <div style={{ display: "flex", gap: 8, flexShrink: 0, marginLeft: 12, marginTop: 4 }}>
-            {/* Delete post button */}
-            <button onClick={() => setConfirmDeletePost(true)}
-              title="Dissolve this star"
-              style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: 7, cursor: "pointer", color: "rgba(252,165,165,0.45)", transition: "all 0.2s" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.2)"; e.currentTarget.style.color = "#fca5a5"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "rgba(239,68,68,0.08)"; e.currentTarget.style.color = "rgba(252,165,165,0.45)"; }}>
-              <Trash2 size={14} />
-            </button>
-            <button onClick={onClose} style={{ background: "rgba(168,85,247,0.1)", border: "1px solid rgba(168,85,247,0.2)", borderRadius: 8, padding: 7, cursor: "pointer", color: "rgba(192,132,252,0.5)" }}>
-              <X size={15} />
-            </button>
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div style={{ height: 1, background: "linear-gradient(90deg, transparent, rgba(168,85,247,0.3), transparent)", margin: "16px 24px 0" }} />
-
-        {/* Body */}
-        <div style={{ overflowY: "auto", padding: "20px 24px 0", flex: 1 }}>
-          <div>
-            {post.body.split("\n\n").map((para, i) => (
-              <p key={i} className="font-cormorant" style={{ fontSize: 17, lineHeight: 1.85, color: "rgba(237,233,254,0.88)", marginBottom: 16, fontStyle: para.startsWith("*") ? "italic" : "normal" }}>
-                {para.replace(/\*/g, "")}
-              </p>
-            ))}
-          </div>
-
-          {/* Echoes section */}
-          <AnimatePresence>
-            {showEchoes && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.3 }}>
-                <div style={{ borderTop: "1px solid rgba(168,85,247,0.15)", marginTop: 8, paddingTop: 16 }}>
-                  <p className="font-sans" style={{ fontSize: 11, color: "rgba(168,85,247,0.4)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 14 }}>Reflections</p>
-                  <div ref={echoRef} style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 200, overflowY: "auto", paddingRight: 4 }}>
-                    {post.echoes.length === 0 && (
-                      <p className="font-cormorant" style={{ color: "rgba(192,132,252,0.3)", fontSize: 15, fontStyle: "italic" }}>No reflections yet. Be the first to echo.</p>
-                    )}
-                    <AnimatePresence>
-                      {post.echoes.map(echo => (
-                        <motion.div key={echo.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10, scale: 0.95 }} transition={{ duration: 0.2 }}
-                          className="echo-card"
-                          style={{ background: "rgba(88,28,135,0.15)", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "flex-start", gap: 10, position: "relative" }}>
-                          <p className="font-cormorant" style={{ fontSize: 15, color: "rgba(237,233,254,0.75)", lineHeight: 1.6, fontStyle: "italic", flex: 1 }}>{echo.text}</p>
-                          <button
-                            onClick={() => setConfirmDeleteEcho(echo.id)}
-                            title="Silence this reflection"
-                            style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(252,165,165,0.25)", padding: "2px 0", flexShrink: 0, transition: "color 0.2s", marginTop: 2 }}
-                            onMouseEnter={e => e.currentTarget.style.color = "rgba(252,165,165,0.75)"}
-                            onMouseLeave={e => e.currentTarget.style.color = "rgba(252,165,165,0.25)"}>
-                            <Trash2 size={12} />
-                          </button>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                  </div>
-                  <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                    <input className="input-field" value={newEcho} onChange={e => setNewEcho(e.target.value)}
-                      placeholder="Leave a reflection..." style={{ fontSize: 13 }}
-                      onKeyDown={e => e.key === "Enter" && onAddEcho()} />
-                    <button onClick={onAddEcho} style={{ background: "rgba(126,34,206,0.7)", border: "1px solid rgba(168,85,247,0.3)", borderRadius: 8, padding: "0 14px", cursor: "pointer", color: "#c084fc", flexShrink: 0, transition: "all 0.2s" }}>
-                      <Send size={14} />
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Footer */}
-        <div style={{ padding: "16px 24px", borderTop: "1px solid rgba(168,85,247,0.1)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-          <button onClick={() => setShowEchoes(!showEchoes)}
-            style={{ background: showEchoes ? "rgba(126,34,206,0.4)" : "rgba(168,85,247,0.1)", border: "1px solid rgba(168,85,247,0.25)", borderRadius: 8, padding: "7px 14px", cursor: "pointer", color: "#c084fc", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, display: "flex", alignItems: "center", gap: 7, transition: "all 0.2s", letterSpacing: "0.02em" }}>
-            <MessageCircle size={13} />
-            {post.echoes.length} Reflection{post.echoes.length !== 1 ? "s" : ""}
-            <motion.div animate={{ rotate: showEchoes ? 180 : 0 }} transition={{ duration: 0.2 }}>
-              <ChevronDown size={12} />
-            </motion.div>
-          </button>
-          <span className="font-sans" style={{ fontSize: 10, color: "rgba(168,85,247,0.25)", letterSpacing: "0.1em", fontStyle: "italic" }}>voices unnamed</span>
-        </div>
-
-        {/* ── Confirm Delete POST overlay ── */}
-        <AnimatePresence>
-          {confirmDeletePost && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ position: "absolute", inset: 0, borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(5,2,15,0.85)", backdropFilter: "blur(8px)", zIndex: 20 }}>
-              <motion.div initial={{ scale: 0.9, opacity: 0, y: 12 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }}
-                style={{ textAlign: "center", padding: "32px 36px", maxWidth: 320 }}>
-                <motion.div animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 2, repeat: Infinity }}>
-                  <AlertTriangle style={{ width: 28, height: 28, color: "#f87171", margin: "0 auto 16px" }} />
-                </motion.div>
-                <h3 className="font-serif" style={{ fontSize: 20, color: "#f3e8ff", marginBottom: 10 }}>Dissolve this Star?</h3>
-                <p className="font-cormorant" style={{ fontSize: 15, color: "rgba(192,132,252,0.55)", lineHeight: 1.6, marginBottom: 24, fontStyle: "italic" }}>
-                  This piece of writing will vanish from the constellation, along with all its reflections. This cannot be undone.
-                </p>
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => setConfirmDeletePost(false)}
-                    style={{ flex: 1, background: "rgba(168,85,247,0.1)", border: "1px solid rgba(168,85,247,0.25)", borderRadius: 8, padding: "9px 0", cursor: "pointer", color: "rgba(192,132,252,0.6)", fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, transition: "all 0.2s" }}>
-                    Keep It
-                  </button>
-                  <button onClick={() => onDeletePost(post.id)}
-                    style={{ flex: 1, background: "rgba(239,68,68,0.2)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 8, padding: "9px 0", cursor: "pointer", color: "#fca5a5", fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                    <Trash2 size={13} /> Dissolve
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* ── Confirm Delete ECHO overlay ── */}
-        <AnimatePresence>
-          {confirmDeleteEcho !== null && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ position: "absolute", inset: 0, borderRadius: 20, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(5,2,15,0.85)", backdropFilter: "blur(8px)", zIndex: 20 }}>
-              <motion.div initial={{ scale: 0.9, opacity: 0, y: 12 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }}
-                style={{ textAlign: "center", padding: "28px 32px", maxWidth: 300 }}>
-                <Trash2 style={{ width: 22, height: 22, color: "rgba(252,165,165,0.6)", margin: "0 auto 14px" }} />
-                <h3 className="font-serif" style={{ fontSize: 18, color: "#f3e8ff", marginBottom: 8 }}>Silence this Reflection?</h3>
-                <p className="font-cormorant" style={{ fontSize: 14, color: "rgba(192,132,252,0.5)", lineHeight: 1.6, marginBottom: 22, fontStyle: "italic" }}>
-                  This echo will fade from the piece, permanently.
-                </p>
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button onClick={() => setConfirmDeleteEcho(null)}
-                    style={{ flex: 1, background: "rgba(168,85,247,0.1)", border: "1px solid rgba(168,85,247,0.25)", borderRadius: 8, padding: "8px 0", cursor: "pointer", color: "rgba(192,132,252,0.6)", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500 }}>
-                    Keep It
-                  </button>
-                  <button onClick={() => { onDeleteEcho(post.id, confirmDeleteEcho); setConfirmDeleteEcho(null); }}
-                    style={{ flex: 1, background: "rgba(239,68,68,0.18)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 8, padding: "8px 0", cursor: "pointer", color: "#fca5a5", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500 }}>
-                    Silence
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </motion.div>
-  );
-}
-
-// ─── SETTINGS PAGE ────────────────────────────────────────────────────────────
-function SettingsPage({ userInfo, onBack, onUpdate, onLogout, tab, setTab }) {
-  const [displayName, setDisplayName] = useState(userInfo?.displayName || "");
-  const [newPw, setNewPw] = useState("");
-  const [confirmPw, setConfirmPw] = useState("");
-  const [feedback, setFeedback] = useState("");
-  const [error, setError] = useState("");
-
-  const handleSave = () => {
-    setFeedback(""); setError("");
-    if (newPw && newPw !== confirmPw) { setError("Passphrases do not match."); return; }
-    if (newPw && newPw.length < 4) { setError("Passphrase must be at least 4 characters."); return; }
-    onUpdate(displayName, newPw);
-    setFeedback("Your details have been preserved.");
-    setNewPw(""); setConfirmPw("");
-  };
-
-  return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}
-    >
-      {/* BG */}
-      <div style={{ position: "absolute", inset: 0 }}>
-        {BG_STARS.slice(0, 80).map(s => (
-          <div key={s.id} style={{ position: "absolute", left: `${s.x}%`, top: `${s.y}%`, width: s.r * 1.5, height: s.r * 1.5, borderRadius: "50%", background: "white", opacity: s.opacity * 0.4 }} />
-        ))}
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 80% 80% at 50% 50%, rgba(88,28,135,0.2) 0%, transparent 70%)" }} />
-      </div>
-
-      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-        className="glass glow-border"
-        style={{ width: 440, borderRadius: 20, padding: "32px 32px 28px", position: "relative", zIndex: 10 }}>
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
-          <div>
-            <h2 className="font-serif glow-text" style={{ fontSize: 24, color: "#f3e8ff" }}>Sanctum</h2>
-            <p className="font-sans" style={{ fontSize: 11, color: "rgba(192,132,252,0.4)", letterSpacing: "0.1em", textTransform: "uppercase", marginTop: 2 }}>Your Private Settings</p>
-          </div>
-          <button onClick={onBack} style={{ background: "rgba(168,85,247,0.1)", border: "1px solid rgba(168,85,247,0.2)", borderRadius: 8, padding: 7, cursor: "pointer", color: "rgba(192,132,252,0.5)" }}>
-            <X size={15} />
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 24 }}>
-          {["profile", "security"].map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              style={{ padding: "6px 16px", borderRadius: 8, border: `1px solid ${tab === t ? "rgba(168,85,247,0.4)" : "rgba(168,85,247,0.15)"}`, background: tab === t ? "rgba(126,34,206,0.35)" : "transparent", color: tab === t ? "#c084fc" : "rgba(192,132,252,0.35)", fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 500, cursor: "pointer", transition: "all 0.2s", letterSpacing: "0.04em", textTransform: "capitalize" }}>
-              {t}
-            </button>
-          ))}
-        </div>
-
-        <AnimatePresence mode="wait">
-          {tab === "profile" && (
-            <motion.div key="profile" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ background: "rgba(88,28,135,0.15)", borderRadius: 12, padding: "14px 16px", border: "1px solid rgba(168,85,247,0.15)" }}>
-                <p className="font-sans" style={{ fontSize: 10, color: "rgba(192,132,252,0.35)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 4 }}>Display Name</p>
-                <p className="font-serif" style={{ fontSize: 16, color: "#e9d5ff" }}>{userInfo?.displayName || "Anonymous Wanderer"}</p>
-                <p className="font-sans" style={{ fontSize: 10, color: "rgba(168,85,247,0.3)", marginTop: 4, fontStyle: "italic" }}>Never visible on your stars or reflections</p>
-              </div>
-              <div>
-                <label className="font-sans" style={{ display: "block", fontSize: 11, color: "rgba(192,132,252,0.45)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>Update Display Name</label>
-                <input className="input-field" value={displayName} onChange={e => setDisplayName(e.target.value)} placeholder="How you see yourself..." />
-              </div>
-            </motion.div>
-          )}
-          {tab === "security" && (
-            <motion.div key="security" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <div>
-                <label className="font-sans" style={{ display: "block", fontSize: 11, color: "rgba(192,132,252,0.45)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>New Passphrase</label>
-                <input className="input-field" type="password" value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="Leave blank to keep current" />
-              </div>
-              <div>
-                <label className="font-sans" style={{ display: "block", fontSize: 11, color: "rgba(192,132,252,0.45)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>Confirm Passphrase</label>
-                <input className="input-field" type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)} placeholder="Confirm your new passphrase" />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {(feedback || error) && (
-            <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="font-sans" style={{ fontSize: 12, color: feedback ? "#86efac" : "#f87171", textAlign: "center", marginTop: 14 }}>
-              {feedback || error}
-            </motion.p>
-          )}
-        </AnimatePresence>
-
-        <div style={{ marginTop: 22, display: "flex", flexDirection: "column", gap: 10 }}>
-          <button className="btn-primary" onClick={handleSave} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, height: 40 }}>
-            <Sparkles size={13} /> Preserve Changes
-          </button>
-          <button onClick={onLogout}
-            style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "rgba(252,165,165,0.6)", padding: "9px 0", borderRadius: 8, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 7, transition: "all 0.2s" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.2)"; e.currentTarget.style.color = "#fca5a5"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(239,68,68,0.1)"; e.currentTarget.style.color = "rgba(252,165,165,0.6)"; }}>
-            <LogOut size={13} /> Depart the Circle
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
+  <style>
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+  </style>
+</body>
+</html>
