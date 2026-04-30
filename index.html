@@ -267,17 +267,30 @@ With something warmer than envy,
 // ═══════════════════════════════════════════════════════════════════════════════
 //  ROOT
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── localStorage helpers ─────────────────────────────────────────────────────
+const LS = {
+  get: (key, fallback) => { try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback; } catch { return fallback; } },
+  set: (key, val)      => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} },
+};
+
 function App() {
-  const [users,   setUsers]   = useState({ luminis:{ password:"luminis", displayName:"A Wandering Mind" } });
-  const [me,      setMe]      = useState(null);
-  const [posts,   setPosts]   = useState(SEED);
-  const [view,    setView]    = useState("gate");
+  // Initialise from localStorage, falling back to defaults on first visit
+  const [users,   setUsers]   = useState(() => LS.get("luminis_users", { luminis:{ password:"luminis", displayName:"A Wandering Mind" } }));
+  const [posts,   setPosts]   = useState(() => LS.get("luminis_posts", SEED));
+  const [me,      setMe]      = useState(() => LS.get("luminis_me",    null));
+  const [view,    setView]    = useState(() => LS.get("luminis_me",    null) ? "constellation" : "gate");
   const [picked,  setPicked]  = useState(null);
   const [showEch, setShowEch] = useState(false);
   const [draft,   setDraft]   = useState("");
   const [sTab,    setSTab]    = useState("profile");
   const [aMode,   setAMode]   = useState("login");
   const [showUpload, setShowUpload] = useState(false);
+
+  // Persist to localStorage whenever these values change
+  useEffect(() => { LS.set("luminis_users", users); }, [users]);
+  useEffect(() => { LS.set("luminis_posts",  posts); }, [posts]);
+  useEffect(() => { LS.set("luminis_me",     me);    }, [me]);
 
   const doLogin  = (id,pw) => { if (users[id]?.password===pw){ setMe(id); setView("constellation"); return null; } return "Invalid credentials. The gate remains closed."; };
   const doSignup = (id,pw) => { if (users[id]) return "This name is already claimed by another wanderer."; if (id.length<3) return "Your unique ID must be at least 3 characters."; setUsers(u=>({...u,[id]:{password:pw,displayName:"Anonymous Wanderer"}})); setMe(id); setView("constellation"); return null; };
