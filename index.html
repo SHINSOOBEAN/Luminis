@@ -128,6 +128,11 @@ const I = {
   Sparkle:  p=><Ic {...p} d={["M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z","M19 13l.75 2.25L22 16l-2.25.75L19 19l-.75-2.25L16 16l2.25-.75L19 13z","M5 13l.75 2.25L8 16l-2.25.75L5 19l-.75-2.25L2 16l2.25-.75L5 13z"]} />,
   Trash:    p=><Ic {...p} d={["M3 6h18","M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6","M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2","M10 11v6","M14 11v6"]} />,
   Warn:     p=><Ic {...p} d={["M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z","M12 9v4","M12 17h.01"]} />,
+  Plus:     p=><Ic {...p} d={["M12 5v14","M5 12h14"]} />,
+  Edit:     p=><Ic {...p} d={["M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7","M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"]} />,
+  Check:    p=><Ic {...p} d="M20 6 9 17l-5-5" />,
+  Upload:   p=><Ic {...p} d={["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4","M17 8l-5-5-5 5","M12 3v12"]} />,
+  FileText: p=><Ic {...p} d={["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z","M14 2v6h6","M16 13H8","M16 17H8","M10 9H8"]} />,
 };
 
 // ─── Background stars (generated once at module level) ────────────────────────
@@ -272,6 +277,7 @@ function App() {
   const [draft,   setDraft]   = useState("");
   const [sTab,    setSTab]    = useState("profile");
   const [aMode,   setAMode]   = useState("login");
+  const [showUpload, setShowUpload] = useState(false);
 
   const doLogin  = (id,pw) => { if (users[id]?.password===pw){ setMe(id); setView("constellation"); return null; } return "Invalid credentials. The gate remains closed."; };
   const doSignup = (id,pw) => { if (users[id]) return "This name is already claimed by another wanderer."; if (id.length<3) return "Your unique ID must be at least 3 characters."; setUsers(u=>({...u,[id]:{password:pw,displayName:"Anonymous Wanderer"}})); setMe(id); setView("constellation"); return null; };
@@ -280,16 +286,35 @@ function App() {
   const delPost  = id => { setPosts(p=>p.filter(x=>x.id!==id)); setPicked(null); setShowEch(false); };
   const delEcho  = (pid,eid) => { setPosts(p=>p.map(x=>x.id===pid?{...x,echoes:x.echoes.filter(e=>e.id!==eid)}:x)); setPicked(p=>({...p,echoes:p.echoes.filter(e=>e.id!==eid)})); };
   const updProf  = (dn,pw) => setUsers(u=>({...u,[me]:{...u[me],displayName:dn||u[me].displayName,...(pw?{password:pw}:{})}}));
+  const addPost  = (title, body) => {
+    const newPost = {
+      id: Date.now(),
+      x: 8 + Math.random() * 84,
+      y: 8 + Math.random() * 84,
+      size: 1.8 + Math.random() * 1.6,
+      bright: 0.7 + Math.random() * 0.3,
+      title, body, echoes: []
+    };
+    setPosts(p => [...p, newPost]);
+    setShowUpload(false);
+  };
+  const updatePost = (id, title, body) => {
+    setPosts(p => p.map(x => x.id===id ? {...x, title, body} : x));
+    setPicked(p => p ? {...p, title, body} : p);
+  };
 
   return (
     <div style={{width:"100vw",height:"100vh",overflow:"hidden",background:"#080613",position:"relative"}}>
       <AnimatePresence mode="wait">
         {view==="gate"          && <GatePage          key="gate"     onLogin={doLogin} onSignup={doSignup} aMode={aMode} setAMode={setAMode} />}
-        {view==="constellation" && <MapPage           key="map"      posts={posts} onPick={p=>{setPicked(p);setShowEch(false);}} onSettings={()=>setView("settings")} />}
+        {view==="constellation" && <MapPage           key="map"      posts={posts} onPick={p=>{setPicked(p);setShowEch(false);}} onSettings={()=>setView("settings")} onNew={()=>setShowUpload(true)} />}
         {view==="settings"      && <SettingsPage      key="settings" info={users[me]} onBack={()=>setView("constellation")} onUpdate={updProf} onLogout={doLogout} tab={sTab} setTab={setSTab} />}
       </AnimatePresence>
       <AnimatePresence>
-        {picked && <Modal post={picked} showEch={showEch} setShowEch={setShowEch} draft={draft} setDraft={setDraft} onAdd={addEcho} onDelPost={delPost} onDelEcho={delEcho} onClose={()=>{setPicked(null);setShowEch(false);}} />}
+        {picked && <Modal post={picked} showEch={showEch} setShowEch={setShowEch} draft={draft} setDraft={setDraft} onAdd={addEcho} onDelPost={delPost} onDelEcho={delEcho} onUpdate={updatePost} onClose={()=>{setPicked(null);setShowEch(false);}} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showUpload && <UploadModal onSubmit={addPost} onClose={()=>setShowUpload(false)} />}
       </AnimatePresence>
     </div>
   );
@@ -389,7 +414,7 @@ function GatePage({ onLogin, onSignup, aMode, setAMode }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 //  CONSTELLATION MAP
 // ═══════════════════════════════════════════════════════════════════════════════
-function MapPage({ posts, onPick, onSettings }) {
+function MapPage({ posts, onPick, onSettings, onNew }) {
   const el = useRef(null);
   const mx = useMotionValue(.5), my = useMotionValue(.5);
   const bx = useTransform(mx,[0,1],[-20,20]), by = useTransform(my,[0,1],[-20,20]);
@@ -418,12 +443,18 @@ function MapPage({ posts, onPick, onSettings }) {
           <h1 className="font-serif glow-text" style={{fontSize:22,color:"#f3e8ff",letterSpacing:".04em"}}>Luminis</h1>
           <p className="font-sans" style={{color:"rgba(192,132,252,.4)",fontSize:11,letterSpacing:".1em",textTransform:"uppercase",marginTop:1}}>The Constellation</p>
         </div>
-        <button onClick={onSettings}
-          style={{background:"rgba(126,34,206,.2)",border:"1px solid rgba(168,85,247,.2)",borderRadius:10,padding:"8px 10px",cursor:"pointer",color:"rgba(192,132,252,.6)",display:"flex",transition:"all .2s"}}
-          onMouseEnter={e=>{e.currentTarget.style.background="rgba(126,34,206,.4)";e.currentTarget.style.color="#c084fc";}}
-          onMouseLeave={e=>{e.currentTarget.style.background="rgba(126,34,206,.2)";e.currentTarget.style.color="rgba(192,132,252,.6)";}}>
-          <I.Settings size={15}/>
-        </button>
+        <div style={{display:"flex",gap:10,alignItems:"center"}}>
+          <motion.button onClick={onNew} whileHover={{scale:1.04}} whileTap={{scale:.97}}
+            style={{background:"linear-gradient(135deg,rgba(126,34,206,.85),rgba(109,40,217,.75))",border:"1px solid rgba(168,85,247,.5)",borderRadius:10,padding:"8px 16px",cursor:"pointer",color:"#f3e8ff",display:"flex",alignItems:"center",gap:7,fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:500,letterSpacing:".02em",boxShadow:"0 0 18px rgba(168,85,247,.25)"}}>
+            <I.Plus size={14}/> New Writing
+          </motion.button>
+          <button onClick={onSettings}
+            style={{background:"rgba(126,34,206,.2)",border:"1px solid rgba(168,85,247,.2)",borderRadius:10,padding:"8px 10px",cursor:"pointer",color:"rgba(192,132,252,.6)",display:"flex",transition:"all .2s"}}
+            onMouseEnter={e=>{e.currentTarget.style.background="rgba(126,34,206,.4)";e.currentTarget.style.color="#c084fc";}}
+            onMouseLeave={e=>{e.currentTarget.style.background="rgba(126,34,206,.2)";e.currentTarget.style.color="rgba(192,132,252,.6)";}}>
+            <I.Settings size={15}/>
+          </button>
+        </div>
       </motion.div>
 
       {posts.map((p,i)=><StarDot key={p.id} post={p} delay={i*.1} onClick={()=>onPick(p)}/>)}
@@ -470,14 +501,32 @@ function StarDot({ post, delay, onClick }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 //  POST MODAL
 // ═══════════════════════════════════════════════════════════════════════════════
-function Modal({ post, showEch, setShowEch, draft, setDraft, onAdd, onDelPost, onDelEcho, onClose }) {
+function Modal({ post, showEch, setShowEch, draft, setDraft, onAdd, onDelPost, onDelEcho, onUpdate, onClose }) {
   const echoEl = useRef(null);
-  const [cfmP,setCfmP] = useState(false);
-  const [cfmE,setCfmE] = useState(null);
+  const [cfmP,setCfmP]     = useState(false);
+  const [cfmE,setCfmE]     = useState(null);
+  const [editing,setEditing] = useState(false);
+  const [editTitle,setEditTitle] = useState(post.title);
+  const [editBody,setEditBody]   = useState(post.body);
+
+  // Keep edit fields in sync if post changes externally
+  useEffect(()=>{ setEditTitle(post.title); setEditBody(post.body); },[post.id]);
 
   useEffect(()=>{
     if(showEch&&echoEl.current) setTimeout(()=>echoEl.current?.scrollTo({top:echoEl.current.scrollHeight,behavior:"smooth"}),100);
   },[showEch,post.echoes.length]);
+
+  const saveEdit = () => {
+    if (!editTitle.trim()) return;
+    onUpdate(post.id, editTitle.trim(), editBody.trim());
+    setEditing(false);
+  };
+
+  const cancelEdit = () => {
+    setEditTitle(post.title);
+    setEditBody(post.body);
+    setEditing(false);
+  };
 
   return (
     <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
@@ -494,21 +543,52 @@ function Modal({ post, showEch, setShowEch, draft, setDraft, onAdd, onDelPost, o
 
         {/* ── Header ── */}
         <div style={{padding:"20px 24px 0",display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexShrink:0}}>
-          <div>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-              <I.Star size={12} style={{color:"#a855f7"}}/><span className="font-sans" style={{fontSize:10,color:"rgba(168,85,247,.5)",letterSpacing:".15em",textTransform:"uppercase"}}>From the Constellation</span>
+          <div style={{flex:1,minWidth:0,paddingRight:12}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+              <I.Star size={12} style={{color:"#a855f7"}}/>
+              <span className="font-sans" style={{fontSize:10,color:"rgba(168,85,247,.5)",letterSpacing:".15em",textTransform:"uppercase"}}>From the Constellation</span>
             </div>
-            <h2 className="font-serif" style={{fontSize:22,color:"#f3e8ff",lineHeight:1.3}}>{post.title}</h2>
+            {editing
+              ? <input value={editTitle} onChange={e=>setEditTitle(e.target.value)}
+                  className="input-field font-serif"
+                  style={{fontSize:20,padding:"8px 12px",letterSpacing:".02em"}}
+                  placeholder="Title…"/>
+              : <h2 className="font-serif" style={{fontSize:22,color:"#f3e8ff",lineHeight:1.3}}>{post.title}</h2>
+            }
           </div>
-          <div style={{display:"flex",gap:8,flexShrink:0,marginLeft:12,marginTop:4}}>
-            <button onClick={()=>setCfmP(true)} style={{background:"rgba(239,68,68,.08)",border:"1px solid rgba(239,68,68,.2)",borderRadius:8,padding:7,cursor:"pointer",color:"rgba(252,165,165,.45)",display:"flex",transition:"all .2s"}}
-              onMouseEnter={e=>{e.currentTarget.style.background="rgba(239,68,68,.2)";e.currentTarget.style.color="#fca5a5";}}
-              onMouseLeave={e=>{e.currentTarget.style.background="rgba(239,68,68,.08)";e.currentTarget.style.color="rgba(252,165,165,.45)";}}>
-              <I.Trash size={14}/>
-            </button>
-            <button onClick={onClose} style={{background:"rgba(168,85,247,.1)",border:"1px solid rgba(168,85,247,.2)",borderRadius:8,padding:7,cursor:"pointer",color:"rgba(192,132,252,.5)",display:"flex"}}>
-              <I.X size={15}/>
-            </button>
+          <div style={{display:"flex",gap:8,flexShrink:0,marginTop:4}}>
+            {editing ? (
+              <>
+                <button onClick={saveEdit} title="Save changes"
+                  style={{background:"rgba(34,197,94,.15)",border:"1px solid rgba(34,197,94,.35)",borderRadius:8,padding:7,cursor:"pointer",color:"rgba(134,239,172,.7)",display:"flex",transition:"all .2s"}}
+                  onMouseEnter={e=>{e.currentTarget.style.background="rgba(34,197,94,.28)";e.currentTarget.style.color="#86efac";}}
+                  onMouseLeave={e=>{e.currentTarget.style.background="rgba(34,197,94,.15)";e.currentTarget.style.color="rgba(134,239,172,.7)";}}>
+                  <I.Check size={14}/>
+                </button>
+                <button onClick={cancelEdit} title="Cancel"
+                  style={{background:"rgba(168,85,247,.1)",border:"1px solid rgba(168,85,247,.2)",borderRadius:8,padding:7,cursor:"pointer",color:"rgba(192,132,252,.5)",display:"flex"}}>
+                  <I.X size={15}/>
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={()=>setEditing(true)} title="Edit this piece"
+                  style={{background:"rgba(168,85,247,.1)",border:"1px solid rgba(168,85,247,.25)",borderRadius:8,padding:7,cursor:"pointer",color:"rgba(192,132,252,.5)",display:"flex",transition:"all .2s"}}
+                  onMouseEnter={e=>{e.currentTarget.style.background="rgba(168,85,247,.25)";e.currentTarget.style.color="#c084fc";}}
+                  onMouseLeave={e=>{e.currentTarget.style.background="rgba(168,85,247,.1)";e.currentTarget.style.color="rgba(192,132,252,.5)";}}>
+                  <I.Edit size={14}/>
+                </button>
+                <button onClick={()=>setCfmP(true)} title="Dissolve this star"
+                  style={{background:"rgba(239,68,68,.08)",border:"1px solid rgba(239,68,68,.2)",borderRadius:8,padding:7,cursor:"pointer",color:"rgba(252,165,165,.45)",display:"flex",transition:"all .2s"}}
+                  onMouseEnter={e=>{e.currentTarget.style.background="rgba(239,68,68,.2)";e.currentTarget.style.color="#fca5a5";}}
+                  onMouseLeave={e=>{e.currentTarget.style.background="rgba(239,68,68,.08)";e.currentTarget.style.color="rgba(252,165,165,.45)";}}>
+                  <I.Trash size={14}/>
+                </button>
+                <button onClick={onClose} style={{background:"rgba(168,85,247,.1)",border:"1px solid rgba(168,85,247,.2)",borderRadius:8,padding:7,cursor:"pointer",color:"rgba(192,132,252,.5)",display:"flex"}}>
+                  <I.X size={15}/>
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -516,59 +596,80 @@ function Modal({ post, showEch, setShowEch, draft, setDraft, onAdd, onDelPost, o
 
         {/* ── Body ── */}
         <div style={{overflowY:"auto",padding:"20px 24px 0",flex:1}}>
-          {post.body.split("\n\n").map((para,i)=>(
-            <p key={i} className="font-cormorant"
-              style={{fontSize:17,lineHeight:1.85,color:"rgba(237,233,254,.88)",marginBottom:16,fontStyle:para.startsWith("*")?"italic":"normal"}}>
-              {para.replace(/\*/g,"")}
-            </p>
-          ))}
+          {editing ? (
+            <textarea value={editBody} onChange={e=>setEditBody(e.target.value)}
+              className="input-field font-cormorant"
+              style={{minHeight:260,resize:"vertical",lineHeight:1.8,fontSize:16,padding:"12px 14px",fontStyle:"normal"}}
+              placeholder="Your writing…"/>
+          ) : (
+            <>
+              {post.body.split("\n\n").map((para,i)=>(
+                <p key={i} className="font-cormorant"
+                  style={{fontSize:17,lineHeight:1.85,color:"rgba(237,233,254,.88)",marginBottom:16,fontStyle:para.startsWith("*")?"italic":"normal"}}>
+                  {para.replace(/\*/g,"")}
+                </p>
+              ))}
+            </>
+          )}
 
-          <AnimatePresence>
-            {showEch && (
-              <motion.div key="ech" initial={{opacity:0,height:0}} animate={{opacity:1,height:"auto"}} exit={{opacity:0,height:0}} transition={{duration:.3}}>
-                <div style={{borderTop:"1px solid rgba(168,85,247,.15)",marginTop:8,paddingTop:16}}>
-                  <p className="font-sans" style={{fontSize:11,color:"rgba(168,85,247,.4)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:14}}>Reflections</p>
-                  <div ref={echoEl} style={{display:"flex",flexDirection:"column",gap:10,maxHeight:200,overflowY:"auto",paddingRight:4}}>
-                    {post.echoes.length===0&&<p className="font-cormorant" style={{color:"rgba(192,132,252,.3)",fontSize:15,fontStyle:"italic"}}>No reflections yet. Be the first to echo.</p>}
-                    <AnimatePresence>
-                      {post.echoes.map(e=>(
-                        <motion.div key={e.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} exit={{opacity:0,x:10,scale:.95}} transition={{duration:.2}}
-                          className="echo-card" style={{background:"rgba(88,28,135,.15)",borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"flex-start",gap:10}}>
-                          <p className="font-cormorant" style={{fontSize:15,color:"rgba(237,233,254,.75)",lineHeight:1.6,fontStyle:"italic",flex:1}}>{e.text}</p>
-                          <button onClick={()=>setCfmE(e.id)}
-                            style={{background:"none",border:"none",cursor:"pointer",color:"rgba(252,165,165,.22)",padding:"2px 0",flexShrink:0,display:"flex",marginTop:2,transition:"color .2s"}}
-                            onMouseEnter={ev=>ev.currentTarget.style.color="rgba(252,165,165,.7)"}
-                            onMouseLeave={ev=>ev.currentTarget.style.color="rgba(252,165,165,.22)"}>
-                            <I.Trash size={12}/>
-                          </button>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
+          {!editing && (
+            <AnimatePresence>
+              {showEch && (
+                <motion.div key="ech" initial={{opacity:0,height:0}} animate={{opacity:1,height:"auto"}} exit={{opacity:0,height:0}} transition={{duration:.3}}>
+                  <div style={{borderTop:"1px solid rgba(168,85,247,.15)",marginTop:8,paddingTop:16}}>
+                    <p className="font-sans" style={{fontSize:11,color:"rgba(168,85,247,.4)",letterSpacing:".12em",textTransform:"uppercase",marginBottom:14}}>Reflections</p>
+                    <div ref={echoEl} style={{display:"flex",flexDirection:"column",gap:10,maxHeight:200,overflowY:"auto",paddingRight:4}}>
+                      {post.echoes.length===0&&<p className="font-cormorant" style={{color:"rgba(192,132,252,.3)",fontSize:15,fontStyle:"italic"}}>No reflections yet. Be the first to echo.</p>}
+                      <AnimatePresence>
+                        {post.echoes.map(e=>(
+                          <motion.div key={e.id} initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} exit={{opacity:0,x:10,scale:.95}} transition={{duration:.2}}
+                            className="echo-card" style={{background:"rgba(88,28,135,.15)",borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"flex-start",gap:10}}>
+                            <p className="font-cormorant" style={{fontSize:15,color:"rgba(237,233,254,.75)",lineHeight:1.6,fontStyle:"italic",flex:1}}>{e.text}</p>
+                            <button onClick={()=>setCfmE(e.id)}
+                              style={{background:"none",border:"none",cursor:"pointer",color:"rgba(252,165,165,.22)",padding:"2px 0",flexShrink:0,display:"flex",marginTop:2,transition:"color .2s"}}
+                              onMouseEnter={ev=>ev.currentTarget.style.color="rgba(252,165,165,.7)"}
+                              onMouseLeave={ev=>ev.currentTarget.style.color="rgba(252,165,165,.22)"}>
+                              <I.Trash size={12}/>
+                            </button>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                    <div style={{display:"flex",gap:8,marginTop:14}}>
+                      <input className="input-field" value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Leave a reflection…" style={{fontSize:13}} onKeyDown={e=>e.key==="Enter"&&onAdd()}/>
+                      <button onClick={onAdd} style={{background:"rgba(126,34,206,.7)",border:"1px solid rgba(168,85,247,.3)",borderRadius:8,padding:"0 14px",cursor:"pointer",color:"#c084fc",flexShrink:0,display:"flex",alignItems:"center"}}>
+                        <I.Send size={14}/>
+                      </button>
+                    </div>
                   </div>
-                  <div style={{display:"flex",gap:8,marginTop:14}}>
-                    <input className="input-field" value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Leave a reflection…" style={{fontSize:13}} onKeyDown={e=>e.key==="Enter"&&onAdd()}/>
-                    <button onClick={onAdd} style={{background:"rgba(126,34,206,.7)",border:"1px solid rgba(168,85,247,.3)",borderRadius:8,padding:"0 14px",cursor:"pointer",color:"#c084fc",flexShrink:0,display:"flex",alignItems:"center"}}>
-                      <I.Send size={14}/>
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
         </div>
 
         {/* ── Footer ── */}
-        <div style={{padding:"16px 24px",borderTop:"1px solid rgba(168,85,247,.1)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-          <button onClick={()=>setShowEch(!showEch)}
-            style={{background:showEch?"rgba(126,34,206,.4)":"rgba(168,85,247,.1)",border:"1px solid rgba(168,85,247,.25)",borderRadius:8,padding:"7px 14px",cursor:"pointer",color:"#c084fc",fontFamily:"'DM Sans',sans-serif",fontSize:12,fontWeight:500,display:"flex",alignItems:"center",gap:7,transition:"all .2s"}}>
-            <I.Msg size={13}/>
-            {post.echoes.length} Reflection{post.echoes.length!==1?"s":""}
-            <motion.span animate={{rotate:showEch?180:0}} transition={{duration:.2}} style={{display:"inline-flex"}}>
-              <I.Chevron size={12}/>
-            </motion.span>
-          </button>
-          <span className="font-sans" style={{fontSize:10,color:"rgba(168,85,247,.22)",letterSpacing:".1em",fontStyle:"italic"}}>voices unnamed</span>
-        </div>
+        {editing ? (
+          <div style={{padding:"14px 24px",borderTop:"1px solid rgba(168,85,247,.1)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+            <span className="font-sans" style={{fontSize:11,color:"rgba(192,132,252,.35)",fontStyle:"italic"}}>Editing your piece — changes are private until saved.</span>
+            <button className="btn-primary" onClick={saveEdit}
+              style={{width:"auto",padding:"8px 20px",display:"flex",alignItems:"center",gap:7,fontSize:13}}>
+              <I.Check size={13}/> Save
+            </button>
+          </div>
+        ) : (
+          <div style={{padding:"16px 24px",borderTop:"1px solid rgba(168,85,247,.1)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+            <button onClick={()=>setShowEch(!showEch)}
+              style={{background:showEch?"rgba(126,34,206,.4)":"rgba(168,85,247,.1)",border:"1px solid rgba(168,85,247,.25)",borderRadius:8,padding:"7px 14px",cursor:"pointer",color:"#c084fc",fontFamily:"'DM Sans',sans-serif",fontSize:12,fontWeight:500,display:"flex",alignItems:"center",gap:7,transition:"all .2s"}}>
+              <I.Msg size={13}/>
+              {post.echoes.length} Reflection{post.echoes.length!==1?"s":""}
+              <motion.span animate={{rotate:showEch?180:0}} transition={{duration:.2}} style={{display:"inline-flex"}}>
+                <I.Chevron size={12}/>
+              </motion.span>
+            </button>
+            <span className="font-sans" style={{fontSize:10,color:"rgba(168,85,247,.22)",letterSpacing:".1em",fontStyle:"italic"}}>voices unnamed</span>
+          </div>
+        )}
 
         {/* ── Confirm delete post ── */}
         <AnimatePresence>
@@ -611,6 +712,160 @@ function Modal({ post, showEch, setShowEch, draft, setDraft, onAdd, onDelPost, o
             </motion.div>
           )}
         </AnimatePresence>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  UPLOAD / COMPOSE MODAL
+// ═══════════════════════════════════════════════════════════════════════════════
+function UploadModal({ onSubmit, onClose }) {
+  const [title,  setTitle]  = useState("");
+  const [body,   setBody]   = useState("");
+  const [err,    setErr]    = useState("");
+  const [tab,    setTab]    = useState("write"); // "write" | "upload"
+  const [drag,   setDrag]   = useState(false);
+  const fileRef = useRef(null);
+
+  const readFile = file => {
+    if (!file) return;
+    if (file.type === "text/plain" || file.name.endsWith(".txt") || file.name.endsWith(".md")) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const text = e.target.result;
+        // Use first non-empty line as title if title is blank
+        const lines = text.split("\n").map(l=>l.trim()).filter(Boolean);
+        if (!title && lines.length) setTitle(lines[0].replace(/^#+ */,""));
+        setBody(text);
+        setTab("write");
+      };
+      reader.readAsText(file);
+    } else {
+      setErr("Please upload a .txt or .md file.");
+    }
+  };
+
+  const handleDrop = e => {
+    e.preventDefault(); setDrag(false);
+    readFile(e.dataTransfer.files[0]);
+  };
+
+  const submit = () => {
+    setErr("");
+    if (!title.trim()) { setErr("A title is required before your piece can become a star."); return; }
+    if (!body.trim())  { setErr("The body cannot be empty — even a single line will do."); return; }
+    onSubmit(title.trim(), body.trim());
+  };
+
+  return (
+    <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+      style={{position:"fixed",inset:0,zIndex:110,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+
+      <motion.div initial={{backdropFilter:"blur(0px)"}} animate={{backdropFilter:"blur(12px)"}} exit={{backdropFilter:"blur(0px)"}}
+        style={{position:"absolute",inset:0,background:"rgba(5,2,15,.85)"}} onClick={onClose}/>
+
+      <motion.div initial={{opacity:0,scale:.92,y:30}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:.92,y:30}}
+        transition={{type:"spring",damping:28,stiffness:280}}
+        className="glass glow-border"
+        style={{position:"relative",zIndex:1,width:"100%",maxWidth:640,maxHeight:"88vh",borderRadius:20,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+
+        {/* Header */}
+        <div style={{padding:"22px 24px 0",display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexShrink:0}}>
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+              <I.Feather size={13} style={{color:"#a855f7"}}/>
+              <span className="font-sans" style={{fontSize:10,color:"rgba(168,85,247,.5)",letterSpacing:".15em",textTransform:"uppercase"}}>New Piece</span>
+            </div>
+            <h2 className="font-serif glow-text" style={{fontSize:22,color:"#f3e8ff"}}>Place a New Star</h2>
+          </div>
+          <button onClick={onClose} style={{background:"rgba(168,85,247,.1)",border:"1px solid rgba(168,85,247,.2)",borderRadius:8,padding:7,cursor:"pointer",color:"rgba(192,132,252,.5)",display:"flex",marginTop:4}}>
+            <I.X size={15}/>
+          </button>
+        </div>
+
+        <div style={{height:1,background:"linear-gradient(90deg,transparent,rgba(168,85,247,.3),transparent)",margin:"16px 24px 0"}}/>
+
+        {/* Mode tabs */}
+        <div style={{display:"flex",background:"rgba(10,5,25,.5)",borderRadius:10,padding:4,margin:"16px 24px 0",border:"1px solid rgba(168,85,247,.12)"}}>
+          {[["write","✍  Write"],["upload","⬆  Upload File"]].map(([m,label])=>(
+            <button key={m} onClick={()=>setTab(m)}
+              style={{flex:1,padding:"8px 0",borderRadius:7,border:"none",cursor:"pointer",fontSize:13,fontFamily:"'DM Sans',sans-serif",fontWeight:500,color:tab===m?"#f3e8ff":"rgba(192,132,252,.4)",background:tab===m?"rgba(126,34,206,.65)":"transparent",transition:"all .25s"}}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Body area */}
+        <div style={{overflowY:"auto",padding:"16px 24px 0",flex:1,display:"flex",flexDirection:"column",gap:14}}>
+          {tab==="write" ? (
+            <>
+              <div>
+                <label className="font-sans" style={{display:"block",fontSize:11,color:"rgba(192,132,252,.45)",letterSpacing:".1em",textTransform:"uppercase",marginBottom:6}}>Title</label>
+                <input className="input-field font-serif"
+                  value={title} onChange={e=>setTitle(e.target.value)}
+                  placeholder="What shall this star be called?"
+                  style={{fontSize:17,padding:"10px 14px"}}/>
+              </div>
+              <div style={{flex:1,display:"flex",flexDirection:"column"}}>
+                <label className="font-sans" style={{display:"block",fontSize:11,color:"rgba(192,132,252,.45)",letterSpacing:".1em",textTransform:"uppercase",marginBottom:6}}>Writing</label>
+                <textarea className="input-field font-cormorant"
+                  value={body} onChange={e=>setBody(e.target.value)}
+                  placeholder="Begin here. The constellation is listening…"
+                  style={{flex:1,minHeight:220,resize:"none",lineHeight:1.8,fontSize:16,padding:"12px 14px",fontStyle:"normal"}}/>
+              </div>
+            </>
+          ) : (
+            <div
+              onDragOver={e=>{e.preventDefault();setDrag(true);}}
+              onDragLeave={()=>setDrag(false)}
+              onDrop={handleDrop}
+              onClick={()=>fileRef.current?.click()}
+              style={{
+                flex:1, minHeight:240, borderRadius:14, cursor:"pointer", display:"flex", flexDirection:"column",
+                alignItems:"center", justifyContent:"center", gap:14, padding:32, transition:"all .2s",
+                border: drag ? "2px solid rgba(168,85,247,.7)" : "2px dashed rgba(168,85,247,.3)",
+                background: drag ? "rgba(88,28,135,.2)" : "rgba(10,5,25,.4)",
+                boxShadow: drag ? "0 0 30px rgba(168,85,247,.2)" : "none",
+              }}>
+              <input ref={fileRef} type="file" accept=".txt,.md" style={{display:"none"}}
+                onChange={e=>readFile(e.target.files[0])}/>
+              <motion.div animate={{y:[0,-4,0]}} transition={{duration:2.5,repeat:Infinity,ease:"easeInOut"}}>
+                <I.Upload size={36} style={{color:drag?"#c084fc":"rgba(168,85,247,.45)"}}/>
+              </motion.div>
+              <div style={{textAlign:"center"}}>
+                <p className="font-serif" style={{fontSize:16,color:drag?"#e9d5ff":"rgba(192,132,252,.6)",marginBottom:6}}>
+                  {drag ? "Release to upload" : "Drop your file here"}
+                </p>
+                <p className="font-sans" style={{fontSize:12,color:"rgba(168,85,247,.35)"}}>or click to browse · .txt and .md files</p>
+              </div>
+              {body && (
+                <div style={{background:"rgba(88,28,135,.2)",borderRadius:10,padding:"8px 16px",border:"1px solid rgba(168,85,247,.2)"}}>
+                  <p className="font-sans" style={{fontSize:12,color:"#c084fc",display:"flex",alignItems:"center",gap:6}}>
+                    <I.FileText size={13}/> File loaded — switch to Write tab to preview &amp; edit
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <AnimatePresence>
+            {err && <motion.p key="e" initial={{opacity:0,y:-6}} animate={{opacity:1,y:0}} exit={{opacity:0}}
+              className="font-sans" style={{color:"#f87171",fontSize:12,textAlign:"center"}}>{err}</motion.p>}
+          </AnimatePresence>
+        </div>
+
+        {/* Footer */}
+        <div style={{padding:"16px 24px",borderTop:"1px solid rgba(168,85,247,.1)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0,marginTop:8}}>
+          <p className="font-sans" style={{fontSize:11,color:"rgba(192,132,252,.3)",fontStyle:"italic"}}>
+            Your piece will appear as a new star in the sky.
+          </p>
+          <button className="btn-primary" onClick={submit}
+            style={{width:"auto",padding:"9px 22px",display:"flex",alignItems:"center",gap:8,fontSize:13}}>
+            <I.Star size={13}/> Publish to Constellation
+          </button>
+        </div>
       </motion.div>
     </motion.div>
   );
